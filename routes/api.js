@@ -1,27 +1,28 @@
-/*
- * Serve JSON to our AngularJS client
- */
+var dataPosts = [];
+var MongoClient = require('mongodb').MongoClient;  
+var blogs;
 
-// For a real app, you'd make database requests here.
-// For this example, "data" acts like an in-memory "database"
-var data = {
-  "posts": [
-    {
-      "title": "Lorem ipsum",
-      "text": "Lorem ipsum dolor sit amet, consectetur adipisicing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."
-    },
-    {
-      "title": "Sed egestas",
-      "text": "Sed egestas, ante et vulputate volutpat, eros pede semper est, vitae luctus metus libero eu augue. Morbi purus libero, faucibus adipiscing, commodo quis, gravida id, est. Sed lectus."
-    }
-  ]
-};
+var connect = MongoClient.connect('mongodb://127.0.0.1:27017/test', 
+  function(err, db) {
+    if(err) 
+      throw err;
+    
+    console.log('connected to the database');
+    blogs = db.collection('blogs');
+    blogs.find().toArray(function(err, docs) {
+      docs.forEach(function(doc){
+        dataPosts.push(doc);
+        console.log(doc);
+        return dataPosts;
+      });
+    });
+});
 
 // GET
 
 exports.posts = function (req, res) {
   var posts = [];
-  data.posts.forEach(function (post, i) {
+  dataPosts.forEach(function (post, i) {
     posts.push({
       id: i,
       title: post.title,
@@ -35,9 +36,9 @@ exports.posts = function (req, res) {
 
 exports.post = function (req, res) {
   var id = req.params.id;
-  if (id >= 0 && id < data.posts.length) {
+  if (id >= 0 && id < dataPosts.length) {
     res.json({
-      post: data.posts[id]
+      post: dataPosts[id]
     });
   } else {
     res.json(false);
@@ -47,8 +48,11 @@ exports.post = function (req, res) {
 // POST
 
 exports.addPost = function (req, res) {
-  data.posts.push(req.body);
+  dataPosts.push(req.body);
   res.json(req.body);
+  blogs.insert(req.body, function(err,doc){
+    console.log(doc);
+  });
 };
 
 // PUT
@@ -56,21 +60,31 @@ exports.addPost = function (req, res) {
 exports.editPost = function (req, res) {
   var id = req.params.id;
 
-  if (id >= 0 && id < data.posts.length) {
-    data.posts[id] = req.body;
+  if (id >= 0 && id < dataPosts.length) {
+    var oldPost = dataPosts[id];
+    dataPosts[id] = req.body;
+    blogs.update(oldPost, {title: dataPosts[id].title, 
+      text:dataPosts[id].text}, 
+      {w:1}, function(err, doc){
+        console.log(doc);
+    });
     res.json(true);
   } else {
     res.json(false);
   }
 };
 
+
 // DELETE
 
 exports.deletePost = function (req, res) {
   var id = req.params.id;
 
-  if (id >= 0 && id < data.posts.length) {
-    data.posts.splice(id, 1);
+  if (id >= 0 && id < dataPosts.length) {
+    dataPosts.splice(id, 1);
+    blogs.remove(dataPosts[id], function(err,doc){
+      console.log(doc);
+    });
     res.json(true);
   } else {
     res.json(false);
