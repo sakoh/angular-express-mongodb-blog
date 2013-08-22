@@ -2,6 +2,7 @@ dataPosts = []
 MongoClient = require("mongodb").MongoClient
 blogs = undefined
 i = 0
+oldPost = []
 connect = MongoClient.connect "mongodb://127.0.0.1:27017/test", (err, db) ->
   throw err  if err
   console.log "connected to the database"
@@ -39,7 +40,6 @@ exports.addPost = (req, res) ->
 exports.editPost = (req, res) ->
   id = req.params.id
   if 0 <= id < dataPosts.length
-    oldPost = []
     i++
     oldPost[i] = dataPosts[id]
     dataPosts[id] = req.body
@@ -56,8 +56,10 @@ exports.editPost = (req, res) ->
 exports.deletePost = (req, res) ->
   id = req.params.id
   if id >= 0 and id < dataPosts.length
+    i++
+    oldPost[i] = dataPosts[id]
     dataPosts.splice id, 1
-    blogs.remove dataPosts[id], (err, doc) -> console.log doc
+    blogs.remove oldPost[i], (err, doc) -> console.log doc
     
     res.json true
   else
